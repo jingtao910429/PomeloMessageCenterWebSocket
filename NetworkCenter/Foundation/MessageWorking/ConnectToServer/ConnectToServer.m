@@ -34,7 +34,7 @@
 
 - (void)chatClientDisconnect
 {
-    [self.chatClient disconnectWithCallback:^(id arg) {
+    [self.chatClient disconnectWithCallback:^(id arg , NSString *route) {
         if ([_delegate respondsToSelector:@selector(connectToServerDisconnectSuccessWithData:)]) {
             [_delegate connectToServerDisconnectSuccessWithData:arg];
         }
@@ -56,9 +56,9 @@
     __block PomeloClient  *weakClient = self.gateClient;
     
     
-    [weakClient connectToHost:[RYChatAPIManager host] onPort:[RYChatAPIManager port] withCallback:^(id arg) {
+    [weakClient connectToHost:[RYChatAPIManager host] onPort:[RYChatAPIManager port] withCallback:^(id arg, NSString *route) {
         
-        [weakClient requestWithRoute:[RYChatAPIManager routeWithType:RouteGateTypeQueryEntry] andParams:[RYChatAPIManager parametersWithType:YES] andCallback:^(id arg) {
+        [weakClient requestWithRoute:[RYChatAPIManager routeWithType:RouteGateTypeQueryEntry] andParams:[RYChatAPIManager parametersWithType:YES] andCallback:^(id arg , NSString *route) {
             
             //断开gate服务器，连接connector服务器
             //断开连接（必须做的操作，否则浪费gate服务器资源）
@@ -95,7 +95,7 @@
     
     if (self.hostStr && self.portStr) {
         
-        [self.chatClient connectToHost:self.hostStr onPort:self.portStr withCallback:^(id arg) {
+        [self.chatClient connectToHost:self.hostStr onPort:self.portStr withCallback:^(id arg, NSString *route) {
             
             if ([_delegate respondsToSelector:@selector(connectToServerSuccessWithData:)]) {
                 [_delegate connectToServerSuccessWithData:arg];

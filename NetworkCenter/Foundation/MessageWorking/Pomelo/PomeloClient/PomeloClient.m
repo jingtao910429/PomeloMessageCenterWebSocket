@@ -10,6 +10,7 @@
 #import "PomeloProtocol.h"
 #import "ProtobufDecoder.h"
 #import "ProtobufEncoder.h"
+#import "MessageTool.h"
 #define POMELO_CLIENT_TYPE @"ios-websocket"
 #define POMELO_CLIENT_VERSION @"0.2"
 
@@ -227,6 +228,7 @@
     NSURL *url = [NSURL URLWithString:urlStr];
     
     _webSocket = [[SRWebSocket alloc] initWithURL:url];
+    NSLog(@"url:%@",url);
     _webSocket.delegate = self;
     if (params) {
         _connectionParam = params;
@@ -241,11 +243,15 @@
         [_callBacks setObject:callback forKey:kPomeloHandshakeCallback];
     }
     [_webSocket open];
+    
 }
+
+
+
 
 - (void)disconnect{
     
-    [self disconnectWithCallback:^(id arg){
+    [self disconnectWithCallback:^(id arg, NSString *route){
         
     }];
     
@@ -395,7 +401,7 @@
         [self send:handshakeAck];
         PomeloCallback handCb = [_callBacks objectForKey:kPomeloHandshakeCallback];
         if (handCb) {
-            handCb([data objectForKey:@"user"]);
+            handCb([data objectForKey:@"user"],@"kPomeloHandshakeCallback");
             [_callBacks removeObjectForKey:kPomeloHandshakeCallback];
         }
     }
@@ -510,7 +516,7 @@
         if (msgRoute) {
             PomeloCallback pushCb = [_callBacks objectForKey:msgRoute];
             if (pushCb) {
-                pushCb([data objectForKey:@"body"]);
+                pushCb([data objectForKey:@"body"],msgRoute);
             }
         }
         
@@ -524,7 +530,7 @@
     
     PomeloCallback cb = [_callBacks objectForKey:MESSAGE_CALLBACK_KEY(msgId)];
     if (cb) {
-        cb([data objectForKey:@"body"]);
+        cb([data objectForKey:@"body"],route);
         [_callBacks removeObjectForKey:MESSAGE_CALLBACK_KEY(msgId)];
     }
 }
@@ -641,12 +647,12 @@
 #if DEBUG == 1
             NSData *data = [NSJSONSerialization dataWithJSONObject:dict options:NSJSONWritingPrettyPrinted error:nil];
             NSString *jsonStr = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
-            //            NSLog(@"%@",jsonStr);
+            //                        NSLog(@"%@",jsonStr);
 #endif
             [_logs addObject:dict];
         }else{
 #if DEBUG == 1
-            //            NSLog(@"%@",keyString);
+            //                        NSLog(@"%@",keyString);
 #endif
             [_logs addObject:keyString];
         }
@@ -712,11 +718,14 @@
 }
 - (void)webSocket:(SRWebSocket *)webSocket didFailWithError:(NSError *)error{
     DEBUGLOG(@"error:%@",error);
+    
     [self addLogWithKey:[NSString stringWithFormat:@"webSocket error code:%d",error.code] andParam:nil];
     [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(handleHeartbeatTimeout) object:nil];
     if (self.delegate && [self.delegate respondsToSelector:@selector(pomeloDisconnect:withError:)] ) {
         [self.delegate pomeloDisconnect:self withError:error];
     }
+    
+    [MessageTool setConnectState:@"NO"];
 }
 - (void)webSocket:(SRWebSocket *)webSocket didCloseWithCode:(NSInteger)code reason:(NSString *)reason wasClean:(BOOL)wasClean{
     DEBUGLOG(@"close code :%d   reason:%@  wasClean:%d",code,reason,wasClean);
@@ -724,7 +733,9 @@
     [[self class] cancelPreviousPerformRequestsWithTarget:self selector:@selector(handleHeartbeatTimeout) object:nil];
     
     if(callback) {
-        callback(self);
+        
+        callback(self,@"Fail");
+        [MessageTool setConnectState:@"NO"];
     }else{
         [self webSocket:webSocket didFailWithError:nil];
     }

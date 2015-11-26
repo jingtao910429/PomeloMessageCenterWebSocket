@@ -97,6 +97,8 @@ static RYChatAPIManager *shareManager = nil;
         case NotifyTypeOnClientShow:
             notifyStr = @"onClientShow";
             break;
+        case NotifyTypeOnChatHistory:
+            notifyStr = @"onChatHistory";
         default:
             break;
     }
@@ -119,21 +121,5 @@ static RYChatAPIManager *shareManager = nil;
     return @"3014";
 }
 
-+ (NSString *)token {
-    
-    NSArray *cookies = [[NSHTTPCookieStorage sharedHTTPCookieStorage] cookies];
-    
-    for (int i = 0; i < cookies.count; i ++) {
-        
-        NSString *cookieName = [(NSHTTPCookie *)cookies[i] name];
-        
-        if ([cookieName isEqualToString:@"Token"]) {
-            return [(NSHTTPCookie *)cookies[i] value];
-            break;
-        }
-    }
-    
-    return nil;
-}
 
 @end

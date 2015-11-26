@@ -10,7 +10,7 @@
 #import "SRWebSocket.h"
 
 
-typedef void(^PomeloCallback)(id arg);
+typedef void(^PomeloCallback)(id arg, NSString *route);
 
 
 

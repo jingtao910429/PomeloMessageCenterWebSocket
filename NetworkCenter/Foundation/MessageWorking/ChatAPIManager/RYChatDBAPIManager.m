@@ -7,6 +7,7 @@
 //
 
 #import "RYChatDBAPIManager.h"
+#import "MessageTool.h"
 
 static RYChatDBAPIManager *shareManager = nil;
 
@@ -53,15 +54,17 @@ static RYChatDBAPIManager *shareManager = nil;
 
 - (void)initDatas {
     
+    //UserId区分用户（误区）
+    
     self.dbName = @"messageCenter.db";
     self.tablesName = @[@"User",@"UserMessage",@"MsgMetadata"];
     self.keys = @[@"MID",@"UserMessageId",@"MsgMetadataId"];
     
-    self.UserCols = @[@"UserId",@"PersonName",@"UserRole",@"Avatar",@"AvatarCache",@"UserName",@"UserType"];
-    self.UserMessageCols = @[@"UserId",@"MessageId",@"GroupId",@"MsgContent",@"CreateTime",@"Status"];
+    self.UserCols = @[@"UserId",@"PersonName",@"UserRole",@"Avatar",@"AvatarCache",@"UserName",@"UserType",@"PhoneNo"];
+    self.UserMessageCols = @[@"accountId",@"UserId",@"MessageId",@"GroupId",@"MsgContent",@"CreateTime",@"Status",@"clientMsgId",@"type",@"creditApplicationStatus"];
     self.MsgMetadataCols = @[@"AccountId",@"GroupId",@"GroupName",@"Avatar",@"AvatarCache",@"GroupType",@"CompanyName",@"ApproveStatus",@"LastedReadMsgId",@"LastedReadTime",@"LastedMsgId",@"LastedMsgSenderName",@"LastedMsgTime",@"LastedMsgContent",@"UnReadMsgCount",@"CreateTime",@"isTop"];
     
-    self.integerArr = @[@"GroupType",@"GroupType",@"UnReadMsgCount"];
+    self.integerArr = @[@"UnReadMsgCount"];
     self.textArr    = @[@"MsgContent",@"LastedMsgContent"];
     
 }
@@ -223,18 +226,21 @@ static RYChatDBAPIManager *shareManager = nil;
             
             for (int i = 0 ; i < colsArr.count ; i ++) {
                 
-                if (i != colsArr.count - 1) {
-                    [foreUpdateStr appendFormat:@"%@ = ?,",colsArr[i]];
-                }else{
-                    [foreUpdateStr appendFormat:@"%@ = ?",colsArr[i]];
+                if (![colsArr[i] isEqualToString:@"UnReadMsgCount"]) {
+                    if (i != colsArr.count - 1) {
+                        [foreUpdateStr appendFormat:@"%@ = ?,",colsArr[i]];
+                    }else{
+                        [foreUpdateStr appendFormat:@"%@ = ?",colsArr[i]];
+                    }
                 }
+                
             }
             
             
             
             NSMutableString *backUpdateStr = [[NSMutableString alloc] initWithFormat:@" where %@ = ",keyStr];
             
-            [backUpdateStr appendString:@"'%@'"];
+            [backUpdateStr appendString:@"'%@' and accountId = '%@'"];
             
             [tempStr appendFormat:@"%@%@",foreUpdateStr,backUpdateStr];
             
@@ -259,9 +265,9 @@ static RYChatDBAPIManager *shareManager = nil;
             }
             
             NSMutableString *backSelectStr = [[NSMutableString alloc] initWithFormat:@" where %@ = ",keyStr];
-            [backSelectStr appendString:@"'%@'"];
+            [backSelectStr appendString:@"'%@' and accountId = '%@'"];
             
-            [tempStr appendString:backSelectStr];
+            [tempStr appendFormat:@"%@",backSelectStr];
             
         }
             break;

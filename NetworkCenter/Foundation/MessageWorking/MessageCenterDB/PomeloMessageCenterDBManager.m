@@ -13,11 +13,18 @@
 #import "MessageCenterMetadataModel.h"
 #import "RYChatDBAPIManager.h"
 #import "MessageTool.h"
+#import "RYChatHandler.h"
+#import "ConnectToServer.h"
+#import "RefreshUIManager.h"
+#import "NSString+Extension.h"
 
+#define GROUP_LIST_NUMBER 20
 @interface PomeloMessageCenterDBManager ()
 
 @property (nonatomic, strong) RYDataBaseStore *dataBaseStore;
 @property (nonatomic, strong) RYChatDBAPIManager *DBAPIManager;
+
+@property (nonatomic, strong) RYChatHandler *getGroupInfoChatHandler;
 
 @end
 
@@ -41,6 +48,15 @@
     }
     return self;
 }
+
+/*
+ 
+ self.UserCols = @[@"UserId",@"PersonName",@"UserRole",@"Avatar",@"AvatarCache",@"UserName",@"UserType",@"PhoneNo"];
+ self.UserMessageCols = @[@"accountId",@"UserId",@"MessageId",@"GroupId",@"MsgContent",@"CreateTime",@"Status",@"clientMsgId",@"type",@"creditApplicationStatus"];
+ self.MsgMetadataCols = @[@"AccountId",@"GroupId",@"GroupName",@"Avatar",@"AvatarCache",@"GroupType",@"CompanyName",@"ApproveStatus",@"LastedReadMsgId",@"LastedReadTime",@"LastedMsgId",@"LastedMsgSenderName",@"LastedMsgTime",@"LastedMsgContent",@"UnReadMsgCount",@"CreateTime",@"isTop"];
+ 
+ 
+ */
 
 
 
@@ -67,6 +83,117 @@
     [_dataBaseStore createTableWithName:[_DBAPIManager tableNameWithTableType:MessageCenterDBManagerTypeMETADATA] sqlString:
      [_DBAPIManager createTableSQLWithTableType:MessageCenterDBManagerTypeMETADATA]];
     
+}
+
+
+- (void)addHistoryMessageToTableWithType:(MessageCenterDBManagerType)tableType data:(NSArray *)datas {
+    
+    NSDate *date = [NSDate date];
+    
+    [_dataBaseStore updateDataInTransactionWithBlock:^(FMDatabase *db, BOOL *rollback) {
+        
+        for (int i = 0 ; i < datas.count ;i++) {
+            
+            MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
+            [messageCenterMessageModel setValuesForKeysWithDictionary:datas[i]];
+            
+            
+            NSString *selectStr = [NSString stringWithFormat:@"select DISTINCT messageId from UserMessage"];
+            FMResultSet *resultSet = [db executeQuery:selectStr];
+            
+            BOOL result = [resultSet next];
+            [resultSet close];
+            
+            if (!result) {
+                NSString *SQLStr = [_DBAPIManager addTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE];
+                
+                messageCenterMessageModel.accountId = [MessageTool getUserID];
+                messageCenterMessageModel.Status = @"1";
+                
+                [db executeUpdate:SQLStr,
+                 messageCenterMessageModel.accountId,
+                 messageCenterMessageModel.userId,
+                 messageCenterMessageModel.messageId,
+                 messageCenterMessageModel.groupId,
+                 messageCenterMessageModel.msgContent,
+                 messageCenterMessageModel.createTime,
+                 messageCenterMessageModel.Status,
+                 messageCenterMessageModel.clientMsgId,
+                 messageCenterMessageModel.type,
+                 messageCenterMessageModel.creditApplicationStatus];
+                [db close];
+            }
+            
+        }
+        
+    }];
+    
+    
+    NSMutableArray *tempDataSource = [[NSMutableArray alloc] init];
+    
+    NSString *selectStr = [NSString stringWithFormat:@"select DISTINCT GroupId from UserMessage"];
+    [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+        
+        while ([set next]) {
+            
+            MessageCenterMetadataModel *metaDataModel = [[MessageCenterMetadataModel alloc] init];
+            metaDataModel.groupId = [set stringForColumn:@"GroupId"];
+            
+            [tempDataSource addObject:metaDataModel];
+            
+            
+        }
+        
+    } Sql:selectStr];
+    
+    
+    for (int i = 0; i < tempDataSource.count; i ++) {
+        
+        MessageCenterMetadataModel *metaDataModel = tempDataSource[i];
+        
+        if (![self existTableWithType:MessageCenterDBManagerTypeMETADATA markID:metaDataModel.groupId]) {
+            
+            self.getGroupInfoChatHandler.parameters = @{@"groupId":metaDataModel.groupId};
+            
+            [self.getGroupInfoChatHandler chat];
+        }
+        
+    }
+    
+    
+    
+    NSLog(@"总耗时：%f", [[NSDate date] timeIntervalSinceDate:date]);
+    
+}
+
+
+- (void)addNoSendMessageToTableWithType:(MessageCenterDBManagerType)tableType data:(NSArray *)datas {
+    
+    NSString *SQLStr = [_DBAPIManager addTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE];
+    
+    for (int i = 0; i < datas.count; i++) {
+        
+        if (tableType == MessageCenterDBManagerTypeMESSAGE) {
+            
+            MessageCenterMessageModel *messageCenterMessageModel = datas[i];
+            
+            messageCenterMessageModel.accountId = [MessageTool getUserID];
+            messageCenterMessageModel.Status    = @"0";
+            
+            [_dataBaseStore updateDataWithSql:SQLStr,
+             messageCenterMessageModel.accountId,
+             messageCenterMessageModel.userId,
+             messageCenterMessageModel.messageId,
+             messageCenterMessageModel.groupId,
+             messageCenterMessageModel.msgContent,
+             messageCenterMessageModel.createTime,
+             messageCenterMessageModel.Status,
+             messageCenterMessageModel.clientMsgId,
+             messageCenterMessageModel.type,
+             messageCenterMessageModel.creditApplicationStatus];
+        }
+        
+    }
 }
 
 - (void)addDataToTableWithType:(MessageCenterDBManagerType)tableType data:(NSArray *)datas {
@@ -102,7 +229,6 @@
         
         NSString *markID = @"";
         NSDictionary *tempDict = (NSDictionary *)datas[i];
-        BOOL exist = NO;
         
         if (tableType == MessageCenterDBManagerTypeUSER) {
             
@@ -122,77 +248,118 @@
             MessageCenterMetadataModel *messageCenterMetadataModel = [[MessageCenterMetadataModel alloc] init];
             [messageCenterMetadataModel setValuesForKeysWithDictionary:datas[i]];
             
+            
+            
             markID = messageCenterMetadataModel.groupId;
             
         }
         
-        exist = [self existTableWithType:tableType markID:markID];
-        
-        if (exist) {
+        if (tableType == MessageCenterDBManagerTypeMESSAGE) {
             
-            [self updateTableWithType:tableType SQLvalue:markID data:[NSArray arrayWithObjects:tempDict, nil]];
+            MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
+            [messageCenterMessageModel setValuesForKeysWithDictionary:datas[i]];
             
-        }else{
-            
-            if (tableType == MessageCenterDBManagerTypeUSER) {
+            if ([self existTableWithType:tableType markID:markID]) {
                 
-                MessageCenterUserModel *messageCenterUserModel = [[MessageCenterUserModel alloc] init];
-                [messageCenterUserModel setValuesForKeysWithDictionary:datas[i]];
+                [self updateTableWithType:tableType SQLvalue:markID data:[NSArray arrayWithObjects:tempDict, nil]];
+                
+            }else{
+                
+                if (messageCenterMessageModel.clientMsgId && ![messageCenterMessageModel.clientMsgId isEqualToString:@"(null)"]) {
+                    
+                    NSString *deleteDataSQLStr = [NSString stringWithFormat:@"delete from UserMessage where AccountId = '%@' and groupId = '%@' and clientMsgId = '%@'",[MessageTool getUserID],messageCenterMessageModel.groupId,messageCenterMessageModel.clientMsgId];
+                    
+                    [_dataBaseStore updateDataWithSql:deleteDataSQLStr];
+                }
+                
+                messageCenterMessageModel.accountId = [MessageTool getUserID];
+                messageCenterMessageModel.Status = @"1";
                 
                 [_dataBaseStore updateDataWithSql:SQLStr,
-                 messageCenterUserModel.userId,
-                 messageCenterUserModel.personName,
-                 messageCenterUserModel.userRole,
-                 messageCenterUserModel.avatar,
-                 messageCenterUserModel.avatarCache,
-                 messageCenterUserModel.userName,
-                 messageCenterUserModel.userType];
-                
-            }else if (tableType == MessageCenterDBManagerTypeMESSAGE) {
-                
-                MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
-                [messageCenterMessageModel setValuesForKeysWithDictionary:datas[i]];
-                
-                [_dataBaseStore updateDataWithSql:SQLStr,
+                 messageCenterMessageModel.accountId,
                  messageCenterMessageModel.userId,
                  messageCenterMessageModel.messageId,
                  messageCenterMessageModel.groupId,
                  messageCenterMessageModel.msgContent,
                  messageCenterMessageModel.createTime,
-                 messageCenterMessageModel.Status];
-                
-            }else if (tableType == MessageCenterDBManagerTypeMETADATA) {
-                
-                MessageCenterMetadataModel *messageCenterMetadataModel = [[MessageCenterMetadataModel alloc] init];
-                [messageCenterMetadataModel setValuesForKeysWithDictionary:datas[i]];
-                
-                //这里使用用户ID，而不是聊天中的userID
-                messageCenterMetadataModel.accountId = [MessageTool token];
-                
-                [_dataBaseStore updateDataWithSql:SQLStr,
-                 messageCenterMetadataModel.accountId,
-                 messageCenterMetadataModel.groupId,
-                 messageCenterMetadataModel.groupName,
-                 messageCenterMetadataModel.avatar,
-                 messageCenterMetadataModel.avatarCache,
-                 messageCenterMetadataModel.groupType,
-                 messageCenterMetadataModel.companyName,
-                 messageCenterMetadataModel.approveStatus,
-                 messageCenterMetadataModel.lastedReadMsgId,
-                 messageCenterMetadataModel.lastedReadTime,
-                 messageCenterMetadataModel.lastedMsgId,
-                 messageCenterMetadataModel.lastedMsgSenderName,
-                 messageCenterMetadataModel.lastedMsgTime,
-                 messageCenterMetadataModel.lastedMsgContent,
-                 messageCenterMetadataModel.unReadMsgCount,
-                 messageCenterMetadataModel.createTime,
-                 messageCenterMetadataModel.isTop];
+                 messageCenterMessageModel.Status,
+                 messageCenterMessageModel.clientMsgId,
+                 messageCenterMessageModel.type,
+                 messageCenterMessageModel.creditApplicationStatus];
                 
             }
             
+            
+            
+        }else{
+            
+            if ([self existTableWithType:tableType markID:markID]) {
+                
+                [self updateTableWithType:tableType SQLvalue:markID data:[NSArray arrayWithObjects:tempDict, nil]];
+                
+            }else{
+                
+                if (tableType == MessageCenterDBManagerTypeUSER) {
+                    
+                    MessageCenterUserModel *messageCenterUserModel = [[MessageCenterUserModel alloc] init];
+                    [messageCenterUserModel setValuesForKeysWithDictionary:datas[i]];
+                    
+                    [_dataBaseStore updateDataWithSql:SQLStr,
+                     messageCenterUserModel.userId,
+                     messageCenterUserModel.personName,
+                     messageCenterUserModel.userRole,
+                     messageCenterUserModel.avatar,
+                     messageCenterUserModel.avatarCache,
+                     messageCenterUserModel.userName,
+                     messageCenterUserModel.userType,
+                     messageCenterUserModel.PhoneNo];
+                    
+                }else if (tableType == MessageCenterDBManagerTypeMETADATA) {
+                    
+                    MessageCenterMetadataModel *messageCenterMetadataModel = [[MessageCenterMetadataModel alloc] init];
+                    [messageCenterMetadataModel setValuesForKeysWithDictionary:datas[i]];
+                    
+                    if (!messageCenterMetadataModel.approveStatus || [messageCenterMetadataModel.approveStatus isKindOfClass:[NSNull class]] || 0 == [messageCenterMetadataModel.approveStatus length]) {
+                        //如果不是系统的消息，则正常更新
+                        
+                        //这里使用用户ID，而不是聊天中的userID
+                        messageCenterMetadataModel.accountId = [MessageTool getUserID];
+                        
+                        [_dataBaseStore updateDataWithSql:SQLStr,
+                         messageCenterMetadataModel.accountId,
+                         messageCenterMetadataModel.groupId,
+                         messageCenterMetadataModel.groupName,
+                         messageCenterMetadataModel.avatar,
+                         messageCenterMetadataModel.avatarCache,
+                         messageCenterMetadataModel.groupType,
+                         messageCenterMetadataModel.companyName,
+                         messageCenterMetadataModel.approveStatus,
+                         messageCenterMetadataModel.lastedReadMsgId,
+                         messageCenterMetadataModel.lastedReadTime,
+                         messageCenterMetadataModel.lastedMsgId,
+                         messageCenterMetadataModel.lastedMsgSenderName,
+                         messageCenterMetadataModel.lastedMsgTime,
+                         messageCenterMetadataModel.lastedMsgContent,
+                         messageCenterMetadataModel.unReadMsgCount,
+                         messageCenterMetadataModel.createTime,
+                         messageCenterMetadataModel.isTop];
+                        
+                    }else{
+                        
+                        SQLStr = [NSString stringWithFormat:@"update MsgMetadata set approveStatus = '%@' where GroupId = '%@' and accountId = '%@'",messageCenterMetadataModel.approveStatus,messageCenterMetadataModel.groupId,[MessageTool getUserID]];
+                        
+                        [_dataBaseStore updateDataWithSql:SQLStr];
+                    }
+                    
+                }
+                
+            }
         }
         
     }
+    
+    [MessageTool setDBChange:@"YES"];
+    
 }
 
 - (NSArray *)fetchDataInfosWithType:(MessageCenterDBManagerType)tableType conditionName:(NSString *)conditionName SQLvalue:(NSString *)SQLvalue messageModel:(MessageCenterMessageModel *)messageModel number:(NSInteger)number{
@@ -204,22 +371,29 @@
         
         NSArray *groupArr = [self fetchDataInfosWithType:MessageCenterDBManagerTypeMETADATA conditionName:conditionName SQLvalue:SQLvalue];
         
-        MessageCenterMetadataModel *messageCenterMetadataModel = groupArr[0];
-        
-        if ([messageCenterMetadataModel.unReadMsgCount intValue] > number) {
+        if (groupArr.count != 0) {
+            MessageCenterMetadataModel *messageCenterMetadataModel = groupArr[0];
             
-            SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' order by UserMessageId desc) limit %d,%d) order by UserMessageId",conditionName,SQLvalue,0,(int)messageCenterMetadataModel.unReadMsgCount];
-            
-        }else{
-            
-            if (!messageModel) {
+            if ([messageCenterMetadataModel.unReadMsgCount intValue] > number) {
                 
-                SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' order by UserMessageId desc) limit %d,%d) order by UserMessageId",conditionName,SQLvalue,0,(int)number];
+                SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' and accountId = '%@' order by CreateTime desc) limit %d,%d) order by CreateTime",conditionName,SQLvalue,[MessageTool getUserID],0,[messageCenterMetadataModel.unReadMsgCount intValue]];
                 
             }else{
-                SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' and UserMessageId < '%@' order by UserMessageId desc) limit %d,%d) order by UserMessageId",conditionName,SQLvalue,messageModel.userMessageId,0,(int)number];
+                
+                if (!messageModel) {
+                    
+                    SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' and accountId = '%@' order by CreateTime desc) limit %d,%d) order by CreateTime",conditionName,SQLvalue,[MessageTool getUserID],0,(int)number];
+                    
+                }else{
+                    
+                    SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' and accountId = '%@' and  CreateTime < '%@' order by CreateTime desc) limit %d,%d) order by CreateTime",conditionName,SQLvalue,[MessageTool getUserID],messageModel.createTime,0,(int)number];
+                }
             }
+        }else{
+            SQLStr = [NSString stringWithFormat:@"select * from (select * from (select * from UserMessage where %@ = '%@' and accountId = '%@' order by CreateTime desc) limit %d,%d) order by CreateTime",conditionName,SQLvalue,[MessageTool getUserID],0,(int)number];
         }
+        
+        
         
         
         [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
@@ -228,9 +402,12 @@
             messageCenterMessageModel.userMessageId = [set stringForColumn:@"UserMessageId"];
             messageCenterMessageModel.userId        = [set stringForColumn:@"UserId"];
             messageCenterMessageModel.messageId     = [set stringForColumn:@"MessageId"];
-            messageCenterMessageModel.msgContent    = [set stringForColumn:@"MsgContent"];
+            messageCenterMessageModel.msgContent    = [[set stringForColumn:@"MsgContent"] unescape];
             messageCenterMessageModel.createTime    = [set stringForColumn:@"CreateTime"];
             messageCenterMessageModel.Status        = [set stringForColumn:@"Status"];
+            messageCenterMessageModel.clientMsgId   = [set stringForColumn:@"clientMsgId"];
+            messageCenterMessageModel.type          = [set stringForColumn:@"type"];
+            messageCenterMessageModel.creditApplicationStatus = [set stringForColumn:@"creditApplicationStatus"];
             
             [resultDatas addObject:messageCenterMessageModel];
             
@@ -256,13 +433,17 @@
             
             MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
             messageCenterMessageModel.userMessageId = [set stringForColumn:@"UserMessageId"];
+            messageCenterMessageModel.accountId    = [set stringForColumn:@"AccountId"];
             messageCenterMessageModel.userId       = [set stringForColumn:@"UserId"];
             messageCenterMessageModel.messageId    = [set stringForColumn:@"MessageId"];
-            messageCenterMessageModel.msgContent   = [set stringForColumn:@"MsgContent"];
+            messageCenterMessageModel.msgContent   = [[set stringForColumn:@"MsgContent"] unescape];
             messageCenterMessageModel.createTime   = [set stringForColumn:@"CreateTime"];
             messageCenterMessageModel.Status       = [set stringForColumn:@"Status"];
             messageCenterMessageModel.personName   = [set stringForColumn:@"PersonName"];
             messageCenterMessageModel.avatar       = [set stringForColumn:@"Avatar"];
+            messageCenterMessageModel.clientMsgId  = [set stringForColumn:@"clientMsgId"];
+            messageCenterMessageModel.type         = [set stringForColumn:@"type"];
+            messageCenterMessageModel.creditApplicationStatus = [set stringForColumn:@"creditApplicationStatus"];
             
             [resultDatas addObject:messageCenterMessageModel];
             
@@ -283,6 +464,7 @@
             messageCenterUserModel.avatarCache = [set stringForColumn:@"AvatarCache"];
             messageCenterUserModel.userName    = [set stringForColumn:@"UserName"];
             messageCenterUserModel.userType    = [set stringForColumn:@"UserType"];
+            messageCenterUserModel.PhoneNo     = [set stringForColumn:@"PhoneNo"];
             
             [resultDatas addObject:messageCenterUserModel];
             
@@ -290,7 +472,7 @@
         
     }else if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
-        SQLStr = [NSString stringWithFormat:@"select * from MsgMetadata where %@ = '%@'",conditionName,SQLvalue];
+        SQLStr = [NSString stringWithFormat:@"select * from MsgMetadata where %@ = '%@' and AccountId = '%@'",conditionName,SQLvalue,[MessageTool getUserID]];
         
         
         [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
@@ -302,15 +484,15 @@
             messageCenterMetadataModel.groupName = [set stringForColumn:@"GroupName"];
             messageCenterMetadataModel.avatar = [set stringForColumn:@"Avatar"];
             messageCenterMetadataModel.avatarCache = [set stringForColumn:@"AvatarCache"];
-            messageCenterMetadataModel.groupType = [set intForColumn:@"GroupType"];
+            messageCenterMetadataModel.groupType = [set stringForColumn:@"GroupType"];
             messageCenterMetadataModel.companyName = [set stringForColumn:@"CompanyName"];
-            messageCenterMetadataModel.approveStatus = [set intForColumn:@"ApproveStatus"];
+            messageCenterMetadataModel.approveStatus = [set stringForColumn:@"ApproveStatus"];
             messageCenterMetadataModel.lastedReadMsgId = [set stringForColumn:@"LastedReadMsgId"];
             messageCenterMetadataModel.lastedReadTime = [set stringForColumn:@"LastedReadTime"];
             messageCenterMetadataModel.lastedMsgId = [set stringForColumn:@"LastedMsgId"];
             messageCenterMetadataModel.lastedMsgSenderName = [set stringForColumn:@"LastedMsgSenderName"];
             messageCenterMetadataModel.lastedMsgTime = [set stringForColumn:@"LastedMsgTime"];
-            messageCenterMetadataModel.lastedMsgContent = [set stringForColumn:@"LastedMsgContent"];
+            messageCenterMetadataModel.lastedMsgContent = [[set stringForColumn:@"LastedMsgContent"] unescape];
             messageCenterMetadataModel.unReadMsgCount = [set stringForColumn:@"UnReadMsgCount"];
             messageCenterMetadataModel.createTime = [set stringForColumn:@"CreateTime"];
             messageCenterMetadataModel.isTop = [set stringForColumn:@"isTop"];
@@ -349,16 +531,22 @@
             MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
             [messageCenterMessageModel setValuesForKeysWithDictionary:tempDict];
             
+            messageCenterMessageModel.accountId = [MessageTool getUserID];
+            
             SQLStr = [NSString stringWithFormat:
-                      [_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE key:@"MessageId"],SQLvalue];
+                      [_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE key:@"MessageId"],SQLvalue,[MessageTool getUserID]];
             
             [_dataBaseStore updateDataWithSql:SQLStr,
+             messageCenterMessageModel.accountId,
              messageCenterMessageModel.userId,
              messageCenterMessageModel.messageId,
              messageCenterMessageModel.groupId,
              messageCenterMessageModel.msgContent,
              messageCenterMessageModel.createTime,
-             messageCenterMessageModel.Status
+             messageCenterMessageModel.Status,
+             messageCenterMessageModel.clientMsgId,
+             messageCenterMessageModel.type,
+             messageCenterMessageModel.creditApplicationStatus
              ];
             
             
@@ -368,7 +556,7 @@
             [messageCenterUserModel setValuesForKeysWithDictionary:tempDict];
             
             
-            SQLStr = [NSString stringWithFormat:[_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeUSER key:@"UserId"],SQLvalue];
+            SQLStr = [NSString stringWithFormat:[_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeUSER key:@"UserId"],SQLvalue,[MessageTool getUserID]];
             
             [_dataBaseStore updateDataWithSql:SQLStr,
              messageCenterUserModel.userId,
@@ -377,7 +565,8 @@
              messageCenterUserModel.avatar,
              messageCenterUserModel.avatarCache,
              messageCenterUserModel.userName,
-             messageCenterUserModel.userType];
+             messageCenterUserModel.userType,
+             messageCenterUserModel.PhoneNo];
             
         }else if (tableType == MessageCenterDBManagerTypeMETADATA) {
             
@@ -385,10 +574,10 @@
             [messageCenterMetadataModel setValuesForKeysWithDictionary:tempDict];
             
             SQLStr = [NSString stringWithFormat:
-                      [_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeMETADATA key:@"GroupId"],SQLvalue];
+                      [_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeMETADATA key:@"GroupId"],SQLvalue,[MessageTool getUserID]];
             
             //同上
-            messageCenterMetadataModel.accountId = [MessageTool token];
+            messageCenterMetadataModel.accountId = [MessageTool getUserID];
             
             [_dataBaseStore updateDataWithSql:SQLStr,
              messageCenterMetadataModel.accountId,
@@ -405,10 +594,14 @@
              messageCenterMetadataModel.lastedMsgSenderName,
              messageCenterMetadataModel.lastedMsgTime,
              messageCenterMetadataModel.lastedMsgContent,
-             messageCenterMetadataModel.unReadMsgCount,
              messageCenterMetadataModel.createTime,
              messageCenterMetadataModel.isTop
              ];
+            
+            
+            [MessageTool setDBChange:@"YES"];
+            
+            
         }
     }
 }
@@ -417,14 +610,17 @@
     
     if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
-        NSString *SQLStr = @"update MsgMetadata set isTop = 'NO'";
+        NSString *SQLStr = [NSString stringWithFormat:@"update MsgMetadata set isTop = 'NO' where accountId = '%@'",[MessageTool getUserID]];
         [_dataBaseStore updateDataWithSql:SQLStr];
         
         if (SQLvalue) {
-            SQLStr = [NSString stringWithFormat:@"update MsgMetadata set isTop = '%@' where GroupId = '%@'",@"YES",SQLvalue];
+            SQLStr = [NSString stringWithFormat:@"update MsgMetadata set isTop = '%@' where GroupId = '%@' and accountId = '%@' ",@"YES",SQLvalue,[MessageTool getUserID]];
             [_dataBaseStore updateDataWithSql:SQLStr];
         }
     }
+    
+    [MessageTool setDBChange:@"YES"];
+    
     
 }
 
@@ -432,40 +628,79 @@
     
     if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
+        
+        //        if (![self existTableWithType:tableType markID:SQLvalue]) {
+        //
+        //
+        //            //如果不存在这条数据
+        //
+        //            [self addDataToTableWithType:tableType data:[[NSArray alloc] initWithObjects:parameters, nil]];
+        //
+        //
+        //        }else{
+        
         NSMutableString *resultSQLStr = [[NSMutableString alloc] initWithString:@"update MsgMetadata set "];
         
-        NSArray *keysArr = parameters.allKeys;
-        
-        for (int i = 0; i < keysArr.count; i ++ ) {
+        if (!parameters[@"ApproveStatus"] || [parameters[@"ApproveStatus"] isKindOfClass:[NSNull class]] || 0 == [parameters[@"ApproveStatus"] length]) {
             
-            NSString *keyStr = keysArr[i];
-            NSString *valueStr = parameters[keyStr];
+            NSArray *keysArr = parameters.allKeys;
             
-            if (i != keysArr.count - 1) {
+            for (int i = 0; i < keysArr.count; i ++ ) {
                 
-                if ([keyStr isEqualToString:@"UnReadMsgCount"]) {
-                    [resultSQLStr appendFormat:@"%@ = %@, ",keyStr,valueStr];
+                NSString *keyStr = keysArr[i];
+                NSString *valueStr = parameters[keyStr];
+                
+                if (i != keysArr.count - 1) {
+                    
+                    if ([keyStr isEqualToString:@"UnReadMsgCount"]) {
+                        if (![valueStr isEqualToString:@"-1"]) {
+                            [resultSQLStr appendFormat:@"%@ = %@, ",keyStr,valueStr];
+                        }
+                    }else{
+                        if (![valueStr isEqualToString:@"-1"]) {
+                            [resultSQLStr appendFormat:@"%@ = '%@', ",keyStr,valueStr];
+                        }
+                        
+                    }
+                    
                 }else{
-                    [resultSQLStr appendFormat:@"%@ = '%@', ",keyStr,valueStr];
-                }
-                
-            }else{
-                
-                if ([keyStr isEqualToString:@"UnReadMsgCount"]) {
-                    [resultSQLStr appendFormat:@"%@ = '%@'",keyStr,valueStr];
-                }else{
-                    [resultSQLStr appendFormat:@"%@ = '%@'",keyStr,valueStr];
+                    
+                    if ([keyStr isEqualToString:@"UnReadMsgCount"]) {
+                        
+                        if (![valueStr isEqualToString:@"-1"]) {
+                            [resultSQLStr appendFormat:@"%@ = %@",keyStr,valueStr];
+                        }
+                        
+                    }else{
+                        
+                        if (![valueStr isEqualToString:@"-1"]) {
+                            [resultSQLStr appendFormat:@"%@ = '%@'",keyStr,valueStr];
+                        }
+                        
+                    }
+                    
                 }
                 
             }
             
+            [resultSQLStr appendFormat:@"where GroupId = '%@' and accountId = '%@'",SQLvalue,[MessageTool getUserID]];
+            
+            [_dataBaseStore updateDataWithSql:resultSQLStr];
+            
+            
+        }else{
+            
+            resultSQLStr = [NSMutableString stringWithFormat:@"update MsgMetadata set approveStatus = '%@' where GroupId = '%@' and accountId = '%@'",parameters[@"ApproveStatus"],SQLvalue,[MessageTool getUserID]];
+            
+            [_dataBaseStore updateDataWithSql:resultSQLStr];
+            
         }
         
-        [resultSQLStr appendFormat:@"where GroupId = '%@'",SQLvalue];
-        
-        [_dataBaseStore updateDataWithSql:resultSQLStr];
+        //        }
         
     }
+    
+    [MessageTool setDBChange:@"YES"];
     
 }
 
@@ -485,7 +720,7 @@
     
     if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
-        NSString *SQLStr = [NSString stringWithFormat:@"delete from MsgMetadata where groupId = '%@'",SQLvalue];
+        NSString *SQLStr = [NSString stringWithFormat:@"delete from MsgMetadata where groupId = '%@' and AccountId = '%@'",SQLvalue,[MessageTool getUserID]];
         
         [_dataBaseStore updateDataWithSql:SQLStr];
         
@@ -493,74 +728,241 @@
     
 }
 
-- (NSArray *)deleteDataWithTableWithType:(MessageCenterDBManagerType)tableType groupReadType:(GroupReadType)readType  SQLvalue:(NSString *)SQLvalue {
+- (NSArray *)deleteDataWithTableWithType:(MessageCenterDBManagerType)tableType groupReadType:(GroupReadType)readType  SQLvalue:(NSString *)SQLvalue currentPage:(NSInteger)currentPage isNeedAllData:(BOOL)isNeedAllData{
     
     NSArray *newDataArr = [[NSArray alloc] init];
-
+    
     if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
         [self deleteDataWithTableWithType:tableType SQLvalue:SQLvalue];
         
-        newDataArr = [self fetchGroupsWithGroupReadType:readType];
+        newDataArr = [self fetchGroupsWithGroupReadType:readType currentPage:currentPage isNeedAllData:(BOOL)isNeedAllData];
     }
+    
+    [MessageTool setDBChange:@"YES"];
+    
+    
     
     return newDataArr;
 }
 
-- (NSArray *)fetchGroupsWithGroupReadType:(GroupReadType)readType {
+- (NSArray *)fetchGroupsWithGroupReadType:(GroupReadType)readType currentPage:(NSInteger)currentPage isNeedAllData:(BOOL)isNeedAllData {
+    
+    //按最新消息时间
     
     NSString *SQLStr = @"";
     NSMutableArray *resultDatas = [[NSMutableArray alloc] init];
     
     switch (readType) {
         case GroupReadTypeAll:
-            SQLStr = @"select * from MsgMetadata";
+            
+            if (isNeedAllData) {
+                SQLStr = [NSString stringWithFormat:@"select * from (select * from MsgMetadata where accountId = '%@' order by LastedMsgTime desc) limit %d,%d",[MessageTool getUserID],0,((int)currentPage) * GROUP_LIST_NUMBER];
+            }else{
+                SQLStr = [NSString stringWithFormat:@"select * from (select * from MsgMetadata where accountId = '%@' order by LastedMsgTime desc) limit %d,%d",[MessageTool getUserID],((int)currentPage - 1) * GROUP_LIST_NUMBER,GROUP_LIST_NUMBER];
+            }
+            
             break;
         case GroupReadTypeNoRead:
-            SQLStr = @"select * from MsgMetadata where UnReadMsgCount > '0'";
             break;
         case GroupReadTypeRead:
-            SQLStr = @"select * from MsgMetadata where UnReadMsgCount = '0'";
             break;
         default:
             break;
+    }
+    
+    MessageCenterMetadataModel *topMessageModel = [[MessageCenterMetadataModel alloc] init];
+    
+    BOOL isNeedTop = NO;
+    
+    if ((isNeedAllData || (!isNeedAllData && currentPage == 1)) && !([[MessageTool topGroupId] isEqualToString:@"NULL"] || [[MessageTool topGroupId] isKindOfClass:[NSNull class]])) {
+        //置顶
+        
+        NSString *topSQL = [NSString stringWithFormat:@"select * from MsgMetadata where accountId = '%@' and groupId = '%@'",[MessageTool getUserID],[MessageTool topGroupId]];
+        
+        [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+            
+            topMessageModel.msgMetadataId = [set stringForColumn:@"MsgMetadataId"];
+            topMessageModel.accountId = [set stringForColumn:@"AccountId"];
+            topMessageModel.groupId = [set stringForColumn:@"GroupId"];
+            topMessageModel.groupName = [set stringForColumn:@"GroupName"];
+            topMessageModel.avatar = [set stringForColumn:@"Avatar"];
+            topMessageModel.avatarCache = [set stringForColumn:@"AvatarCache"];
+            topMessageModel.groupType = [set stringForColumn:@"GroupType"];
+            topMessageModel.companyName = [set stringForColumn:@"CompanyName"];
+            topMessageModel.approveStatus = [set stringForColumn:@"ApproveStatus"];
+            topMessageModel.lastedReadMsgId = [set stringForColumn:@"LastedReadMsgId"];
+            topMessageModel.lastedReadTime = [set stringForColumn:@"LastedReadTime"];
+            topMessageModel.lastedMsgId = [set stringForColumn:@"LastedMsgId"];
+            topMessageModel.lastedMsgSenderName = [set stringForColumn:@"LastedMsgSenderName"];
+            topMessageModel.lastedMsgTime = [set stringForColumn:@"LastedMsgTime"];
+            topMessageModel.lastedMsgContent = [[set stringForColumn:@"LastedMsgContent"] unescape];
+            topMessageModel.unReadMsgCount = [set stringForColumn:@"UnReadMsgCount"];
+            topMessageModel.createTime = [set stringForColumn:@"CreateTime"];
+            topMessageModel.isTop = [set stringForColumn:@"isTop"];
+            
+        } Sql:topSQL];
+        
+        if (topMessageModel.groupId) {
+            isNeedTop = YES;
+        }
+        
     }
     
     
     [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
         
         MessageCenterMetadataModel *messageCenterMetadataModel = [[MessageCenterMetadataModel alloc] init];
+        
         messageCenterMetadataModel.msgMetadataId = [set stringForColumn:@"MsgMetadataId"];
         messageCenterMetadataModel.accountId = [set stringForColumn:@"AccountId"];
         messageCenterMetadataModel.groupId = [set stringForColumn:@"GroupId"];
         messageCenterMetadataModel.groupName = [set stringForColumn:@"GroupName"];
         messageCenterMetadataModel.avatar = [set stringForColumn:@"Avatar"];
         messageCenterMetadataModel.avatarCache = [set stringForColumn:@"AvatarCache"];
-        messageCenterMetadataModel.groupType = [set intForColumn:@"GroupType"];
+        messageCenterMetadataModel.groupType = [set stringForColumn:@"GroupType"];
         messageCenterMetadataModel.companyName = [set stringForColumn:@"CompanyName"];
-        messageCenterMetadataModel.approveStatus = [set intForColumn:@"ApproveStatus"];
+        messageCenterMetadataModel.approveStatus = [set stringForColumn:@"ApproveStatus"];
         messageCenterMetadataModel.lastedReadMsgId = [set stringForColumn:@"LastedReadMsgId"];
         messageCenterMetadataModel.lastedReadTime = [set stringForColumn:@"LastedReadTime"];
         messageCenterMetadataModel.lastedMsgId = [set stringForColumn:@"LastedMsgId"];
         messageCenterMetadataModel.lastedMsgSenderName = [set stringForColumn:@"LastedMsgSenderName"];
         messageCenterMetadataModel.lastedMsgTime = [set stringForColumn:@"LastedMsgTime"];
-        messageCenterMetadataModel.lastedMsgContent = [set stringForColumn:@"LastedMsgContent"];
+        messageCenterMetadataModel.lastedMsgContent = [[set stringForColumn:@"LastedMsgContent"] unescape];
         messageCenterMetadataModel.unReadMsgCount = [set stringForColumn:@"UnReadMsgCount"];
         messageCenterMetadataModel.createTime = [set stringForColumn:@"CreateTime"];
         messageCenterMetadataModel.isTop = [set stringForColumn:@"isTop"];
         
-        [resultDatas addObject:messageCenterMetadataModel];
+        //如果有置顶信息，不添加
+        if (![messageCenterMetadataModel.isTop isEqualToString:@"YES"]) {
+            [resultDatas addObject:messageCenterMetadataModel];
+        }
         
         
     } Sql:SQLStr];
     
-    /*
-     
-     待测试
-     
-     */
     
-    MessageCenterMetadataModel *isTopModel = nil;
+    //如果本地缓存不足GROUP_LIST_NUMBER条数据，需要重新从服务器返回
+    if (resultDatas.count != GROUP_LIST_NUMBER && !isNeedAllData) {
+        return nil;
+    }
+    
+    //本操作在于，查询数据库每个组的最新消息，如果该消息时间比组数据记录的最新消息时间早，说明组消息记录的最新消息不正确，需要纠正
+    for (int i = 0; i < resultDatas.count; i ++) {
+        
+        MessageCenterMetadataModel *tempMetadataModel = resultDatas[i];
+        
+        NSString *selectMessageSQL = [NSString stringWithFormat:@"select * from (select * from UserMessage where GroupId = '%@' and accountId = '%@' and type = '1' order by CreateTime desc) limit %d,%d",tempMetadataModel.groupId,tempMetadataModel.accountId,0,1];
+        
+        MessageCenterMessageModel *messageModel = [[MessageCenterMessageModel alloc] init];
+        
+        [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+            
+            messageModel.groupId = [set stringForColumn:@"GroupId"];
+            messageModel.userMessageId = [set stringForColumn:@"UserMessageId"];
+            messageModel.accountId     = [set stringForColumn:@"AccountId"];
+            messageModel.userId        = [set stringForColumn:@"UserId"];
+            messageModel.messageId     = [set stringForColumn:@"MessageId"];
+            messageModel.msgContent    = [[set stringForColumn:@"MsgContent"] unescape];
+            messageModel.createTime    = [set stringForColumn:@"CreateTime"];
+            messageModel.Status        = [set stringForColumn:@"Status"];
+            messageModel.clientMsgId   = [set stringForColumn:@"clientMsgId"];
+            messageModel.type          = [set stringForColumn:@"type"];
+            messageModel.creditApplicationStatus = [set stringForColumn:@"creditApplicationStatus"];
+            
+        } Sql:selectMessageSQL];
+        
+        if (messageModel.accountId) {
+            
+            //如果改message存在
+            
+            //更新数据库数据
+            NSString *updateMetadataSQLStr = [NSString stringWithFormat:
+                                              [_DBAPIManager updateTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE key:@"MessageId"],messageModel.messageId,[MessageTool getUserID]];
+            
+            [_dataBaseStore updateDataWithSql:updateMetadataSQLStr,
+             messageModel.accountId,
+             messageModel.userId,
+             messageModel.messageId,
+             messageModel.groupId,
+             messageModel.msgContent,
+             messageModel.createTime,
+             messageModel.Status,
+             messageModel.clientMsgId,
+             messageModel.type,
+             messageModel.creditApplicationStatus
+             ];
+            
+            tempMetadataModel.lastedMsgId = messageModel.messageId;
+            tempMetadataModel.lastedMsgContent = messageModel.msgContent;
+            tempMetadataModel.lastedMsgTime = messageModel.createTime;
+            
+        }
+        
+        NSString *systemMessageSQL = [NSString stringWithFormat:@"select * from (select * from UserMessage where GroupId = '%@' and accountId = '%@' and type = '101' order by CreateTime desc) limit %d,%d",tempMetadataModel.groupId,tempMetadataModel.accountId,0,1];
+        
+        MessageCenterMessageModel *systemMessageModel = [[MessageCenterMessageModel alloc] init];
+        
+        [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+            
+            systemMessageModel.groupId = [set stringForColumn:@"GroupId"];
+            systemMessageModel.userMessageId = [set stringForColumn:@"UserMessageId"];
+            systemMessageModel.accountId     = [set stringForColumn:@"AccountId"];
+            systemMessageModel.userId        = [set stringForColumn:@"UserId"];
+            systemMessageModel.messageId     = [set stringForColumn:@"MessageId"];
+            systemMessageModel.msgContent    = [[set stringForColumn:@"MsgContent"] unescape];
+            systemMessageModel.createTime    = [set stringForColumn:@"CreateTime"];
+            systemMessageModel.Status        = [set stringForColumn:@"Status"];
+            systemMessageModel.clientMsgId   = [set stringForColumn:@"clientMsgId"];
+            systemMessageModel.type          = [set stringForColumn:@"type"];
+            systemMessageModel.creditApplicationStatus = [set stringForColumn:@"creditApplicationStatus"];
+            
+        } Sql:systemMessageSQL];
+        
+        if (systemMessageModel.accountId) {
+            
+            //更新数据库数据approveStatus
+            NSString *systemUpdateMetadataSQLStr = [NSMutableString stringWithFormat:@"update MsgMetadata set approveStatus = '%@' where GroupId = '%@' and accountId = '%@'",systemMessageModel.messageId,systemMessageModel.groupId,[MessageTool getUserID]];
+            
+            [_dataBaseStore updateDataWithSql:systemUpdateMetadataSQLStr];
+            
+        }
+        
+    }
+    
+    if (isNeedTop) {
+        
+        NSMutableArray *topTempArr = [[NSMutableArray alloc] initWithObjects:topMessageModel, nil];
+        
+        for (int i = 0; i < resultDatas.count; i ++) {
+            
+            MessageCenterMetadataModel *subModel = resultDatas[i];
+            
+            if (![topMessageModel.groupId isEqualToString:subModel.groupId]) {
+                [topTempArr addObject:resultDatas[i]];
+            }
+        }
+        
+        resultDatas = [[NSMutableArray alloc] initWithArray:topTempArr];
+        
+    }
+    
+    //2015-11-10T01:16:26.000Z
+    //系统群为结束状态（-1，-5，-6，7）60天，60后前端不保留，自动删除
+    //消息群如被激活后，连续3天未有访问，前端不保留，自动删除
+    
+    NSMutableArray *tempArr = [[NSMutableArray alloc] initWithCapacity:20];
+    
+    for (int i = 0; i < resultDatas.count; i ++) {
+        
+        MessageCenterMetadataModel *model = resultDatas[i];
+        
+        if (-1 == [self compareModel:model]) {
+            [tempArr addObject:model];
+        }
+    }
+    
+    resultDatas = [[NSMutableArray alloc] initWithArray:tempArr];
     
     int pos = -1;
     
@@ -569,38 +971,113 @@
         MessageCenterMetadataModel *model = resultDatas[i];
         
         if ([model.isTop isEqualToString:@"YES"]) {
-            isTopModel = model;
             pos = i;
             break;
         }
         
     }
     
-    if (isTopModel && pos != -1) {
-        
-        [resultDatas removeObjectAtIndex:pos];
-        
-        resultDatas = [[NSMutableArray alloc] initWithArray:[resultDatas sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
-            MessageCenterMetadataModel *obj1Model = (MessageCenterMetadataModel *)obj1;
-            MessageCenterMetadataModel *obj2Model = (MessageCenterMetadataModel *)obj2;
-            
-            return [obj1Model.unReadMsgCount intValue] - [obj2Model.unReadMsgCount intValue];
-        }]];
-        
-        [resultDatas insertObject:isTopModel atIndex:0];
-        
-    }else{
-        
-        resultDatas = [[NSMutableArray alloc] initWithArray:[resultDatas sortedArrayUsingComparator:^NSComparisonResult(id obj1, id obj2) {
-            MessageCenterMetadataModel *obj1Model = (MessageCenterMetadataModel *)obj1;
-            MessageCenterMetadataModel *obj2Model = (MessageCenterMetadataModel *)obj2;
-            
-            return [obj1Model.unReadMsgCount intValue] - [obj2Model.unReadMsgCount intValue];
-        }]];
-        
+    if (pos != -1) {
+        [resultDatas exchangeObjectAtIndex:0 withObjectAtIndex:pos];
     }
     
     return resultDatas;
+}
+
+- (void)loadDataWhenPushHistoryMessage {
+    
+    NSMutableArray *tempDataSource = [[NSMutableArray alloc] init];
+    
+    NSString *selectStr = [NSString stringWithFormat:@"select GroupId,count(*) as TNumbers from UserMessage group by GroupId"];
+    
+    [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+        
+        MessageCenterMetadataModel *metaDataModel = [[MessageCenterMetadataModel alloc] init];
+        metaDataModel.groupId = [set stringForColumn:@"GroupId"];
+        metaDataModel.TNumbers = [set stringForColumn:@"TNumbers"];
+        
+        [tempDataSource addObject:metaDataModel];
+        
+    } Sql:selectStr];
+    
+    
+    //获取组信息 GroupId
+    
+    for (int i = 0; i < tempDataSource.count; i ++) {
+        
+        MessageCenterMetadataModel *metaDataModel = tempDataSource[i];
+        
+        //组未读消息设置(无论有没有组全部更新)
+        
+        NSString *selectSql = [NSString stringWithFormat:@"select * from (select * from UserMessage where GroupId = '%@' and accountId = '%@' order by CreateTime desc) limit %d,%d",metaDataModel.groupId,[MessageTool getUserID],0,1];
+        
+        NSString *numbers = metaDataModel.TNumbers;
+        
+        NSMutableArray *resultDatas = [[NSMutableArray alloc] init];
+        
+        [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
+            
+            MessageCenterMessageModel *messageCenterMessageModel = [[MessageCenterMessageModel alloc] init];
+            messageCenterMessageModel.userMessageId = [set stringForColumn:@"UserMessageId"];
+            messageCenterMessageModel.accountId     = [set stringForColumn:@"AccountId"];
+            messageCenterMessageModel.userId        = [set stringForColumn:@"UserId"];
+            messageCenterMessageModel.messageId     = [set stringForColumn:@"MessageId"];
+            messageCenterMessageModel.msgContent    = [[set stringForColumn:@"MsgContent"] unescape];
+            messageCenterMessageModel.createTime    = [set stringForColumn:@"CreateTime"];
+            messageCenterMessageModel.Status        = [set stringForColumn:@"Status"];
+            messageCenterMessageModel.clientMsgId   = [set stringForColumn:@"clientMsgId"];
+            messageCenterMessageModel.type          = [set stringForColumn:@"type"];
+            messageCenterMessageModel.creditApplicationStatus = [set stringForColumn:@"creditApplicationStatus"];
+            
+            [resultDatas addObject:messageCenterMessageModel];
+            
+        } Sql:selectSql];
+        
+        if (resultDatas.count > 0) {
+            
+            MessageCenterMessageModel *messageCenterMessageModel  = resultDatas[0];
+            
+            //如果没有组，则获取组信息
+            if ([[[PomeloMessageCenterDBManager shareInstance] fetchDataInfosWithType:MessageCenterDBManagerTypeMETADATA conditionName:@"GroupId" SQLvalue:metaDataModel.groupId] count] == 0) {
+                
+                [self addDataToTableWithType:MessageCenterDBManagerTypeMETADATA data:[NSArray arrayWithObjects:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"%@",metaDataModel.groupId],@"GroupId",numbers,@"UnReadMsgCount",[NSString stringWithFormat:@"%@",messageCenterMessageModel.messageId],@"LastedMsgId",[NSString stringWithFormat:@"%@",@""],@"LastedMsgSenderName",[NSString stringWithFormat:@"%@",messageCenterMessageModel.createTime],@"LastedMsgTime",[NSString stringWithFormat:@"%@",messageCenterMessageModel.msgContent],@"LastedMsgContent", nil], nil]];
+                
+                self.getGroupInfoChatHandler.parameters = @{@"groupId":metaDataModel.groupId};
+                
+                [self.getGroupInfoChatHandler chat];
+                
+            }else{
+                
+                //是否是纯历史的消息
+                //当前计数 ＋ numbers
+                
+                [self updateGroupLastedMessageWithTableWithType:MessageCenterDBManagerTypeMETADATA SQLvalue:[NSString stringWithFormat:@"%@",messageCenterMessageModel.groupId] parameters:[NSDictionary dictionaryWithObjectsAndKeys:[NSString stringWithFormat:@"UnReadMsgCount + '%@'",numbers],@"UnReadMsgCount",[NSString stringWithFormat:@"%@",messageCenterMessageModel.messageId],@"LastedMsgId",[NSString stringWithFormat:@"%@",@""],@"LastedMsgSenderName",[NSString stringWithFormat:@"%@",messageCenterMessageModel.createTime],@"LastedMsgTime",[NSString stringWithFormat:@"%@",messageCenterMessageModel.msgContent],@"LastedMsgContent", nil]];
+                
+            }
+            
+        }
+        
+    }
+    
+    
+    
+}
+
+/**
+ *
+ *  删除本地缓存
+ *
+ */
+- (void)clearLocalDBData {
+    
+    //删除message表重新建立
+    //删除MsgMetadata表重新建立
+    NSString *messageSQL = [NSString stringWithFormat:@"delete from UserMessage where accountId = '%@'",[MessageTool getUserID]];
+    
+    NSString *msgMetadataSql = [NSString stringWithFormat:@"delete from MsgMetadata where accountId = '%@'",[MessageTool getUserID]];
+    [_dataBaseStore updateDataWithSql:messageSQL];
+    [_dataBaseStore updateDataWithSql:msgMetadataSql];
+    
 }
 
 /**
@@ -616,33 +1093,77 @@
     
     NSString*     SQLStr = nil;
     
-    __block int exist = 0;
-    
     if (tableType == MessageCenterDBManagerTypeMESSAGE) {
         
-        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE key:@"MessageId"],markID];
+        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeMESSAGE key:@"MessageId"],markID,[MessageTool getUserID]];
         
     }else if (tableType == MessageCenterDBManagerTypeUSER) {
         
-        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeUSER key:@"UserId"],markID];
+        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeUSER key:@"UserId"],markID,[MessageTool getUserID]];
         
     }else if (tableType == MessageCenterDBManagerTypeMETADATA) {
         
-        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeMETADATA key:@"groupId"],markID];
+        SQLStr = [NSString stringWithFormat:[_DBAPIManager selectTableSQLWithTableType:MessageCenterDBManagerTypeMETADATA key:@"groupId"],markID,[MessageTool getUserID]];
         
     }
     
+    NSMutableArray *resultDatas = [[NSMutableArray alloc] init];
+    
     [_dataBaseStore getDataFromTableWithResultSet:^(FMResultSet *set) {
         
-        exist ++;
+        NSObject *object = [[NSObject alloc] init];
+        [resultDatas addObject:object];
+        
         
     } Sql:SQLStr];
     
-    if (exist != 0) {
+    if (resultDatas.count != 0) {
         return YES;
     }
     
     return NO;
+}
+
+- (NSInteger)compareModel:(MessageCenterMetadataModel *)model{
+    
+    NSTimeInterval  oneDay = 24*60*60*1;
+    
+    NSTimeInterval nowTimeInterval = [[NSDate date] timeIntervalSince1970];
+    
+    //2015-11-10T01:16:26.000Z
+    
+    NSCharacterSet *characterSet = [NSCharacterSet characterSetWithCharactersInString:@"TZ."];
+    
+    NSArray *times = [model.createTime componentsSeparatedByCharactersInSet:characterSet];
+    
+    NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
+    [formatter setDateFormat:@"yyyy-MM-dd HH:mm:ss"];
+    
+    NSDate *createDate = [formatter dateFromString:[NSString stringWithFormat:@"%@ %@",times[0],times[1]]];
+    
+    NSTimeInterval createTimeInterval = [createDate timeIntervalSince1970];
+    
+    
+    if (model.approveStatus) {
+        if (-1 == [model.approveStatus intValue] || -5 == [model.approveStatus intValue] || -6 == [model.approveStatus intValue] || 7 == [model.approveStatus intValue]) {
+            
+            if ((nowTimeInterval - createTimeInterval) >= 60 * oneDay) {
+                //大于60天
+                return 1;
+            }
+            
+        }else{
+            
+            
+            if ((nowTimeInterval - createTimeInterval) >= 3 * oneDay) {
+                //大于3天
+                return 2;
+            }
+        }
+        
+    }
+    
+    return -1;
 }
 
 #pragma mark 本地存储简化对外接口
@@ -672,6 +1193,15 @@
  */
 - (void)storeMetaDataWithDatas:(NSArray *)metaDatas {
     [[PomeloMessageCenterDBManager shareInstance] addDataToTableWithType:MessageCenterDBManagerTypeMETADATA data:metaDatas];
+}
+
+
+- (RYChatHandler *)getGroupInfoChatHandler {
+    if (!_getGroupInfoChatHandler) {
+        _getGroupInfoChatHandler = [[RYChatHandler alloc] initWithDelegate:[[ConnectToServer shareInstance] delegate]];
+        _getGroupInfoChatHandler.chatServerType = RouteChatTypeGetGroupInfo;
+    }
+    return _getGroupInfoChatHandler;
 }
 
 @end

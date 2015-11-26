@@ -71,6 +71,18 @@
 		98BE696D1BD60E0900DFD027 /* FMResultSet.m in Sources */ = {isa = PBXBuildFile; fileRef = 98BE69681BD60E0900DFD027 /* FMResultSet.m */; };
 		98BE69711BD60E1F00DFD027 /* RYDataBaseStore.m in Sources */ = {isa = PBXBuildFile; fileRef = 98BE69701BD60E1F00DFD027 /* RYDataBaseStore.m */; };
 		98BE69791BD6109C00DFD027 /* libsqlite3.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 98BE69781BD6109C00DFD027 /* libsqlite3.dylib */; };
+		98D62A841C070A1E004B07FE /* RefreshUIManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A831C070A1E004B07FE /* RefreshUIManager.m */; };
+		98D62A881C070C85004B07FE /* NSString+Extension.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A871C070C85004B07FE /* NSString+Extension.m */; };
+		98D62AA21C070CBE004B07FE /* RYDataBaseCriteria.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A8C1C070CBE004B07FE /* RYDataBaseCriteria.m */; };
+		98D62AA31C070CBE004B07FE /* RYDataBaseRecord.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A901C070CBE004B07FE /* RYDataBaseRecord.m */; };
+		98D62AA41C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A961C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.m */; };
+		98D62AA51C070CBE004B07FE /* RYDataBaseTable+FetchMethods.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A991C070CBE004B07FE /* RYDataBaseTable+FetchMethods.m */; };
+		98D62AA61C070CBE004B07FE /* NSArray+TransformItemsToClass.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A9C1C070CBE004B07FE /* NSArray+TransformItemsToClass.m */; };
+		98D62AA71C070CBE004B07FE /* NSString+SQL.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62A9F1C070CBE004B07FE /* NSString+SQL.m */; };
+		98D62AA81C070CBE004B07FE /* RYDataBaseTable.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62AA11C070CBE004B07FE /* RYDataBaseTable.m */; };
+		98D62AAC1C070DB8004B07FE /* GetMembersAPICmd.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62AAB1C070DB8004B07FE /* GetMembersAPICmd.m */; };
+		98D62AAF1C070E38004B07FE /* GetGroupMemberAPICmd.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62AAE1C070E38004B07FE /* GetGroupMemberAPICmd.m */; };
+		98D62AB21C070E5D004B07FE /* LZAudioTool.m in Sources */ = {isa = PBXBuildFile; fileRef = 98D62AB11C070E5D004B07FE /* LZAudioTool.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -197,6 +209,32 @@
 		98BE696F1BD60E1F00DFD027 /* RYDataBaseStore.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseStore.h; sourceTree = "<group>"; };
 		98BE69701BD60E1F00DFD027 /* RYDataBaseStore.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RYDataBaseStore.m; sourceTree = "<group>"; };
 		98BE69781BD6109C00DFD027 /* libsqlite3.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsqlite3.dylib; path = usr/lib/libsqlite3.dylib; sourceTree = SDKROOT; };
+		98D62A821C070A1E004B07FE /* RefreshUIManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RefreshUIManager.h; sourceTree = "<group>"; };
+		98D62A831C070A1E004B07FE /* RefreshUIManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RefreshUIManager.m; sourceTree = "<group>"; };
+		98D62A861C070C85004B07FE /* NSString+Extension.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+Extension.h"; sourceTree = "<group>"; };
+		98D62A871C070C85004B07FE /* NSString+Extension.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+Extension.m"; sourceTree = "<group>"; };
+		98D62A8B1C070CBE004B07FE /* RYDataBaseCriteria.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseCriteria.h; sourceTree = "<group>"; };
+		98D62A8C1C070CBE004B07FE /* RYDataBaseCriteria.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RYDataBaseCriteria.m; sourceTree = "<group>"; };
+		98D62A8D1C070CBE004B07FE /* RYDataBaseMarcos.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseMarcos.h; sourceTree = "<group>"; };
+		98D62A8F1C070CBE004B07FE /* RYDataBaseRecord.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseRecord.h; sourceTree = "<group>"; };
+		98D62A901C070CBE004B07FE /* RYDataBaseRecord.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RYDataBaseRecord.m; sourceTree = "<group>"; };
+		98D62A911C070CBE004B07FE /* RYDataBaseRecordProtocol.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseRecordProtocol.h; sourceTree = "<group>"; };
+		98D62A951C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "RYDataBaseTable+AnalyzeSQL.h"; sourceTree = "<group>"; };
+		98D62A961C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "RYDataBaseTable+AnalyzeSQL.m"; sourceTree = "<group>"; };
+		98D62A981C070CBE004B07FE /* RYDataBaseTable+FetchMethods.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "RYDataBaseTable+FetchMethods.h"; sourceTree = "<group>"; };
+		98D62A991C070CBE004B07FE /* RYDataBaseTable+FetchMethods.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "RYDataBaseTable+FetchMethods.m"; sourceTree = "<group>"; };
+		98D62A9B1C070CBE004B07FE /* NSArray+TransformItemsToClass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSArray+TransformItemsToClass.h"; sourceTree = "<group>"; };
+		98D62A9C1C070CBE004B07FE /* NSArray+TransformItemsToClass.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSArray+TransformItemsToClass.m"; sourceTree = "<group>"; };
+		98D62A9E1C070CBE004B07FE /* NSString+SQL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "NSString+SQL.h"; sourceTree = "<group>"; };
+		98D62A9F1C070CBE004B07FE /* NSString+SQL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "NSString+SQL.m"; sourceTree = "<group>"; };
+		98D62AA01C070CBE004B07FE /* RYDataBaseTable.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RYDataBaseTable.h; sourceTree = "<group>"; };
+		98D62AA11C070CBE004B07FE /* RYDataBaseTable.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RYDataBaseTable.m; sourceTree = "<group>"; };
+		98D62AAA1C070DB8004B07FE /* GetMembersAPICmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GetMembersAPICmd.h; sourceTree = "<group>"; };
+		98D62AAB1C070DB8004B07FE /* GetMembersAPICmd.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GetMembersAPICmd.m; sourceTree = "<group>"; };
+		98D62AAD1C070E38004B07FE /* GetGroupMemberAPICmd.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = GetGroupMemberAPICmd.h; sourceTree = "<group>"; };
+		98D62AAE1C070E38004B07FE /* GetGroupMemberAPICmd.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GetGroupMemberAPICmd.m; sourceTree = "<group>"; };
+		98D62AB01C070E5D004B07FE /* LZAudioTool.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = LZAudioTool.h; sourceTree = "<group>"; };
+		98D62AB11C070E5D004B07FE /* LZAudioTool.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LZAudioTool.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -230,6 +268,7 @@
 		3764EB1D17F0268600093CF7 = {
 			isa = PBXGroup;
 			children = (
+				98D62A891C070CBE004B07FE /* DataBaseStore */,
 				98BE696E1BD60E1F00DFD027 /* RYDataBaseStore */,
 				98BE695D1BD60E0900DFD027 /* fmdb */,
 				980C27921BD09E380026EA86 /* README.rtfd */,
@@ -343,6 +382,8 @@
 		4EF0E6B11BDF227000F1ABFB /* MessageWorking */ = {
 			isa = PBXGroup;
 			children = (
+				98D62AA91C070DAA004B07FE /* NetAPI */,
+				98D62A851C070C7B004B07FE /* category */,
 				4EF0E74A1BDF71CD00F1ABFB /* ConnectToServer */,
 				4EF0E6B21BDF227000F1ABFB /* ChatAPIManager */,
 				4EF0E6B51BDF227000F1ABFB /* ChatHandler */,
@@ -403,6 +444,10 @@
 		4EF0E6C61BDF227000F1ABFB /* MessageTool */ = {
 			isa = PBXGroup;
 			children = (
+				98D62AB01C070E5D004B07FE /* LZAudioTool.h */,
+				98D62AB11C070E5D004B07FE /* LZAudioTool.m */,
+				98D62A821C070A1E004B07FE /* RefreshUIManager.h */,
+				98D62A831C070A1E004B07FE /* RefreshUIManager.m */,
 				4EF0E6C71BDF227000F1ABFB /* MessageTool.h */,
 				4EF0E6C81BDF227000F1ABFB /* MessageTool.m */,
 			);
@@ -602,6 +647,113 @@
 			path = RYDataBaseStore;
 			sourceTree = "<group>";
 		};
+		98D62A851C070C7B004B07FE /* category */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A861C070C85004B07FE /* NSString+Extension.h */,
+				98D62A871C070C85004B07FE /* NSString+Extension.m */,
+			);
+			path = category;
+			sourceTree = "<group>";
+		};
+		98D62A891C070CBE004B07FE /* DataBaseStore */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A8A1C070CBE004B07FE /* Criteria */,
+				98D62A8D1C070CBE004B07FE /* RYDataBaseMarcos.h */,
+				98D62A8E1C070CBE004B07FE /* RYDataBaseRecord */,
+				98D62A921C070CBE004B07FE /* RYDataBaseTable */,
+			);
+			path = DataBaseStore;
+			sourceTree = "<group>";
+		};
+		98D62A8A1C070CBE004B07FE /* Criteria */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A8B1C070CBE004B07FE /* RYDataBaseCriteria.h */,
+				98D62A8C1C070CBE004B07FE /* RYDataBaseCriteria.m */,
+			);
+			path = Criteria;
+			sourceTree = "<group>";
+		};
+		98D62A8E1C070CBE004B07FE /* RYDataBaseRecord */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A8F1C070CBE004B07FE /* RYDataBaseRecord.h */,
+				98D62A901C070CBE004B07FE /* RYDataBaseRecord.m */,
+				98D62A911C070CBE004B07FE /* RYDataBaseRecordProtocol.h */,
+			);
+			path = RYDataBaseRecord;
+			sourceTree = "<group>";
+		};
+		98D62A921C070CBE004B07FE /* RYDataBaseTable */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A931C070CBE004B07FE /* Categories */,
+				98D62AA01C070CBE004B07FE /* RYDataBaseTable.h */,
+				98D62AA11C070CBE004B07FE /* RYDataBaseTable.m */,
+			);
+			path = RYDataBaseTable;
+			sourceTree = "<group>";
+		};
+		98D62A931C070CBE004B07FE /* Categories */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A941C070CBE004B07FE /* AnalyzeSQL */,
+				98D62A971C070CBE004B07FE /* FetchMethods */,
+				98D62A9A1C070CBE004B07FE /* NSArray */,
+				98D62A9D1C070CBE004B07FE /* NSString */,
+			);
+			path = Categories;
+			sourceTree = "<group>";
+		};
+		98D62A941C070CBE004B07FE /* AnalyzeSQL */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A951C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.h */,
+				98D62A961C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.m */,
+			);
+			path = AnalyzeSQL;
+			sourceTree = "<group>";
+		};
+		98D62A971C070CBE004B07FE /* FetchMethods */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A981C070CBE004B07FE /* RYDataBaseTable+FetchMethods.h */,
+				98D62A991C070CBE004B07FE /* RYDataBaseTable+FetchMethods.m */,
+			);
+			path = FetchMethods;
+			sourceTree = "<group>";
+		};
+		98D62A9A1C070CBE004B07FE /* NSArray */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A9B1C070CBE004B07FE /* NSArray+TransformItemsToClass.h */,
+				98D62A9C1C070CBE004B07FE /* NSArray+TransformItemsToClass.m */,
+			);
+			path = NSArray;
+			sourceTree = "<group>";
+		};
+		98D62A9D1C070CBE004B07FE /* NSString */ = {
+			isa = PBXGroup;
+			children = (
+				98D62A9E1C070CBE004B07FE /* NSString+SQL.h */,
+				98D62A9F1C070CBE004B07FE /* NSString+SQL.m */,
+			);
+			path = NSString;
+			sourceTree = "<group>";
+		};
+		98D62AA91C070DAA004B07FE /* NetAPI */ = {
+			isa = PBXGroup;
+			children = (
+				98D62AAD1C070E38004B07FE /* GetGroupMemberAPICmd.h */,
+				98D62AAE1C070E38004B07FE /* GetGroupMemberAPICmd.m */,
+				98D62AAA1C070DB8004B07FE /* GetMembersAPICmd.h */,
+				98D62AAB1C070DB8004B07FE /* GetMembersAPICmd.m */,
+			);
+			path = NetAPI;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -704,20 +856,28 @@
 			buildActionMask = 2147483647;
 			files = (
 				4EF0E6F51BDF227000F1ABFB /* NSData+SRB64Additions.m in Sources */,
+				98D62AAC1C070DB8004B07FE /* GetMembersAPICmd.m in Sources */,
 				980C27891BD099110026EA86 /* AFHTTPRequestOperation.m in Sources */,
 				3764EB4317F0268600093CF7 /* ViewController.m in Sources */,
 				980C278B1BD099110026EA86 /* AFHTTPSessionManager.m in Sources */,
+				98D62AA81C070CBE004B07FE /* RYDataBaseTable.m in Sources */,
 				4EF0E6EC1BDF227000F1ABFB /* MessageTool.m in Sources */,
 				98BE69691BD60E0900DFD027 /* FMDatabase.m in Sources */,
+				98D62AA31C070CBE004B07FE /* RYDataBaseRecord.m in Sources */,
 				3764EB3A17F0268600093CF7 /* AppDelegate.m in Sources */,
 				980C278C1BD099110026EA86 /* AFNetworkReachabilityManager.m in Sources */,
 				4EF0E6E91BDF227000F1ABFB /* MessageCenterMessageModel.m in Sources */,
 				980C27911BD099110026EA86 /* AFURLSessionManager.m in Sources */,
 				98BE696B1BD60E0900DFD027 /* FMDatabasePool.m in Sources */,
+				98D62AA51C070CBE004B07FE /* RYDataBaseTable+FetchMethods.m in Sources */,
 				4EF0E6F41BDF227000F1ABFB /* base64.c in Sources */,
 				980C27711BD095860026EA86 /* RYAPIManager.m in Sources */,
+				98D62A841C070A1E004B07FE /* RefreshUIManager.m in Sources */,
+				98D62AA61C070CBE004B07FE /* NSArray+TransformItemsToClass.m in Sources */,
 				980C278E1BD099110026EA86 /* AFURLConnectionOperation.m in Sources */,
+				98D62AAF1C070E38004B07FE /* GetGroupMemberAPICmd.m in Sources */,
 				4EF0E6F01BDF227000F1ABFB /* ProtobufDecoder.m in Sources */,
+				98D62AA21C070CBE004B07FE /* RYDataBaseCriteria.m in Sources */,
 				980C27901BD099110026EA86 /* AFURLResponseSerialization.m in Sources */,
 				4EF0E6F61BDF227000F1ABFB /* SRWebSocket.m in Sources */,
 				980C276F1BD095860026EA86 /* RYBaseAPICmd.m in Sources */,
@@ -726,9 +886,13 @@
 				980C27741BD095AF0026EA86 /* LoginAPICmd.m in Sources */,
 				4EF0E6E71BDF227000F1ABFB /* PomeloMessageCenterDBManager.m in Sources */,
 				98BE696C1BD60E0900DFD027 /* FMDatabaseQueue.m in Sources */,
+				98D62AB21C070E5D004B07FE /* LZAudioTool.m in Sources */,
 				4EF0E6EB1BDF227000F1ABFB /* MessageCenterUserModel.m in Sources */,
+				98D62AA71C070CBE004B07FE /* NSString+SQL.m in Sources */,
+				98D62A881C070C85004B07FE /* NSString+Extension.m in Sources */,
 				3764EB3617F0268600093CF7 /* main.m in Sources */,
 				4EF0E6ED1BDF227000F1ABFB /* PomeloClient.m in Sources */,
+				98D62AA41C070CBE004B07FE /* RYDataBaseTable+AnalyzeSQL.m in Sources */,
 				98B9C0C51BE1F81D00A2C372 /* RYChatDBAPIManager.m in Sources */,
 				4EF0E74D1BDF71CD00F1ABFB /* ConnectToServer.m in Sources */,
 				980C27701BD095860026EA86 /* RYAPILogger.m in Sources */,

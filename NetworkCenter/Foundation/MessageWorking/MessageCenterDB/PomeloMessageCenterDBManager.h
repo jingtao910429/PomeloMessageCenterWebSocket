@@ -32,7 +32,7 @@ typedef NS_ENUM(NSInteger, MessageCenterDBManagerType){
     MessageCenterDBManagerTypeUSER = 0,
     //消息表
     MessageCenterDBManagerTypeMESSAGE  = 1,
-    //组表（类似聊天界面包含个人和组的表）
+    //消息Metadata(MsgMetadata)
     MessageCenterDBManagerTypeMETADATA = 2
 };
 
@@ -56,6 +56,17 @@ typedef NS_ENUM(NSInteger, MessageCenterDBManagerType){
 + (instancetype)shareInstance;
 
 /*---------------------------------数据库交互-------------------------------*/
+
+- (void)addHistoryMessageToTableWithType:(MessageCenterDBManagerType)tableType data:(NSArray *)datas;
+
+/**
+ *  发送消息（本地发送消息，首先保存数据库，如果发送成功，则更新）
+ *
+ *  @param tableType MessageCenterDBManagerType表类型
+ *  @param datas     数据组
+ */
+
+- (void)addNoSendMessageToTableWithType:(MessageCenterDBManagerType)tableType data:(NSArray *)datas;
 
 /**
  *
@@ -83,7 +94,7 @@ typedef NS_ENUM(NSInteger, MessageCenterDBManagerType){
 /**
  *
  *  根据不同的表类型获取表中信息(无分页)
- *  
+ *
  *  @param tableType MessageCenterDBManagerType表类型
  *  @param conditionName  conditionName sql字段
  *  @param SQLvalue   需要拼合的sql字段
@@ -135,7 +146,7 @@ typedef NS_ENUM(NSInteger, MessageCenterDBManagerType){
  *  @param readType ReadTypeName
  */
 
-- (NSArray *)fetchGroupsWithGroupReadType:(GroupReadType)readType;
+- (NSArray *)fetchGroupsWithGroupReadType:(GroupReadType)readType currentPage:(NSInteger)currentPage isNeedAllData:(BOOL)isNeedAllData;
 
 /**
  *  简单组列表删除
@@ -153,7 +164,34 @@ typedef NS_ENUM(NSInteger, MessageCenterDBManagerType){
  *  @param SQLvalue  SQLvalue需要拼合的sql字段
  */
 
-- (NSArray *)deleteDataWithTableWithType:(MessageCenterDBManagerType)tableType groupReadType:(GroupReadType)readType SQLvalue:(NSString *)SQLvalue;
+- (NSArray *)deleteDataWithTableWithType:(MessageCenterDBManagerType)tableType groupReadType:(GroupReadType)readType SQLvalue:(NSString *)SQLvalue currentPage:(NSInteger)currentPage isNeedAllData:(BOOL)isNeedAllData;
+
+/**
+ *
+ *  清除本地缓存
+ *
+ */
+
+- (void)clearLocalDBData;
+
+/**
+ *
+ *  推送历史消息时,最后拿取组信息
+ *
+ */
+
+- (void)loadDataWhenPushHistoryMessage;
+
+/**
+ *  判断数据库中是否存在指定ID的数据
+ *
+ *  @param tableType 表类型
+ *  @param markID    userid或者MessageId或者groupid
+ *
+ *  @return BOOL
+ *
+ */
+- (BOOL)existTableWithType:(MessageCenterDBManagerType)tableType markID:(NSString *)markID;
 
 /*---------------------------------本地存储简化对外接口-------------------------------*/
 

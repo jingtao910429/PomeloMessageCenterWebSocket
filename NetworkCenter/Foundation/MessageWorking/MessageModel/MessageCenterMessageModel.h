@@ -13,6 +13,7 @@
 @property (nonatomic, copy) NSString *userMessageId; //主键
 @property (nonatomic, copy) NSString *messageId;
 @property (nonatomic, copy) NSString *userId;        //发送者
+@property (nonatomic, copy) NSString *accountId;     //区别用户
 @property (nonatomic, copy) NSString *groupId;
 @property (nonatomic, copy) NSString *msgContent;    //发送的信息文本
 @property (nonatomic, copy) NSString *createTime;    //消息创建时间
@@ -24,7 +25,7 @@
 @property (nonatomic, copy) NSString *personName;
 @property (nonatomic, copy) NSString *avatar;
 
-//标记该信息已经被删除过
-@property (nonatomic, copy) NSString *isHistoryMessage;
-
+@property (nonatomic, copy) NSString *clientMsgId;    //1970年至今-sessionId；为发送消息的时间精确到毫秒；sessionId: 客户端连接消息中心服务器时，服务器返回给客户端的sessionId;
+@property (nonatomic, copy) NSString *creditApplicationStatus;
+@property (nonatomic, copy) NSString *type;           //消息类型1: 文本消息；101：信贷申请状态变更；
 @end

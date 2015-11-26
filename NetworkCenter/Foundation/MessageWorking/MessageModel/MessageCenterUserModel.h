@@ -20,6 +20,7 @@
 @property (nonatomic, copy) NSString *avatarCache;
 @property (nonatomic, copy) NSString *userName;
 @property (nonatomic, copy) NSString *userType;
+@property (nonatomic, copy) NSString *PhoneNo;
 
 
 @end

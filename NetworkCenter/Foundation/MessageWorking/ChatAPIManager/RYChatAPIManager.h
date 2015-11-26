@@ -33,7 +33,7 @@ typedef NS_ENUM(NSInteger, RouteGateTypeName){
 
 /**
  *  连接connector服务器的路由
- *  
+ *
  *  RouteConnectorTypeName
  */
 typedef NS_ENUM(NSInteger, RouteConnectorTypeName){
@@ -146,7 +146,13 @@ typedef NS_ENUM(NSInteger, NotifyType){
      *  接收到消息群组client端展示推送
      */
     
-    NotifyTypeOnClientShow     = 7 << 3
+    NotifyTypeOnClientShow     = 7 << 3,
+    
+    /**
+     *  接收历史消息
+     */
+    
+    NotifyTypeOnChatHistory    = 7 << 4
     
 };
 
@@ -174,8 +180,5 @@ typedef NS_ENUM(NSInteger, NotifyType){
 
 /// 连接gate服务器的端口号
 + (NSString *)port;
-
-/// 已登录下获取token值
-+ (NSString *)token;
 
 @end
